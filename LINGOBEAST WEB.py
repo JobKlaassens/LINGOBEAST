@@ -6,16 +6,24 @@ from collections import Counter
 # --- CONFIGURATIE ---
 st.set_page_config(page_title="LingoBeast", page_icon="🦁")
 
-# --- CSS STYLING VOOR DE BLOKJES ---
-# Dit stukje CSS zorgt ervoor dat de knoppen vierkant lijken en grotere letters hebben
+# --- CSS STYLING ---
 st.markdown("""
 <style>
+    /* Styling voor de hoofdletters (grote blokjes) */
     div.stButton > button:first-child {
         height: 3em;
         width: 100%;
         font-size: 24px !important;
         font-weight: bold;
         border: 2px solid #333;
+    }
+    
+    /* Styling voor de alternatieve knoppen (kleiner en subtieler) */
+    div[data-testid="stHorizontalBlock"] button {
+        height: auto;
+        font-size: 16px !important;
+        font-weight: normal;
+        border: 1px solid #ccc;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -66,7 +74,7 @@ def filter_words(possible_words, guess, feedback):
 def calculate_weighted_avg_log(remaining_solutions, guesses):
     guess_analysis = {guess: Counter() for guess in guesses}
     
-    # We beperken de analyse als er nog heel veel woorden zijn voor snelheid
+    # Optimalisatie: bij veel woorden, rekenen we met een subset voor snelheid
     if len(remaining_solutions) > 500:
          guesses_to_check = guesses[:500]
     else:
@@ -116,11 +124,19 @@ if 'possible_words' not in st.session_state:
 if 'current_guess' not in st.session_state:
     st.session_state.current_guess = ""
 if 'feedback_colors' not in st.session_state:
-    st.session_state.feedback_colors = [] # Lijst met 0, 1 of 2
+    st.session_state.feedback_colors = [] 
+if 'latest_scores' not in st.session_state:
+    st.session_state.latest_scores = {}
 
-# Helper functie om kleuren te cyclen (0->1->2->0)
+# Helper functie om kleuren te cyclen
 def cycle_color(index):
     st.session_state.feedback_colors[index] = (st.session_state.feedback_colors[index] + 1) % 3
+
+# Helper functie om te wisselen naar een alternatief woord
+def switch_word(new_word):
+    st.session_state.current_guess = new_word
+    # Reset kleuren (eerste letter groen, rest grijs)
+    st.session_state.feedback_colors = [2] + [0] * (st.session_state.length - 1)
 
 # --- STAP 1: SETUP ---
 if st.session_state.step == 1:
@@ -139,8 +155,8 @@ if st.session_state.step == 1:
             logs = load_precomputed_logs(first_letter, length)
             if logs:
                 st.session_state.possible_words = list(logs.keys())
+                st.session_state.latest_scores = logs # Opslaan voor alternatieven
                 st.session_state.current_guess = max(logs, key=logs.get)
-                # Reset kleuren: Eerste letter groen (2), rest grijs (0)
                 st.session_state.feedback_colors = [2] + [0] * (length - 1)
                 st.session_state.step = 2
                 st.rerun()
@@ -151,34 +167,48 @@ if st.session_state.step == 1:
 elif st.session_state.step == 2:
     st.write(f"**{len(st.session_state.possible_words)}** woorden over.")
     
-    st.markdown("### Klik op de letters om de kleur te wijzigen:")
-    
-    # Hier maken we de interactieve knoppen
-    # We gebruiken kolommen om ze naast elkaar te zetten
+    # 1. DE HOOFD BLOKJES
+    st.markdown("### Huidige gok:")
     cols = st.columns(st.session_state.length)
-    
     current_word = st.session_state.current_guess.upper()
     
     for i, col in enumerate(cols):
         status = st.session_state.feedback_colors[i]
-        letter = current_word[i]
+        # Veiligheid: zorg dat we niet crashen als woordlengte niet klopt
+        letter = current_word[i] if i < len(current_word) else "?"
         
-        # Bepaal emoji/kleur op basis van status
         if status == 2:
-            display_text = f"{letter}\n🟩" # Groen
+            display_text = f"{letter}\n🟩" 
         elif status == 1:
-            display_text = f"{letter}\n🟨" # Geel
+            display_text = f"{letter}\n🟨"
         else:
-            display_text = f"{letter}\n⬛" # Grijs/Zwart
+            display_text = f"{letter}\n⬛"
             
-        # Maak de knop. on_click zorgt dat de functie 'cycle_color' wordt aangeroepen
         col.button(display_text, key=f"btn_{i}", on_click=cycle_color, args=(i,))
 
-    st.write("") # Witregel
+    # 2. DE ALTERNATIEVEN
+    # Sorteer de scores van hoog naar laag
+    sorted_scores = sorted(st.session_state.latest_scores.items(), key=lambda x: x[1], reverse=True)
     
-    # Bevestig knop
-    if st.button("✅ Volgende Gok Berekenen"):
-        # Zet de kleurenlijst om naar een string "21020"
+    # Haal de top 4 (waarbij index 0 waarschijnlijk de huidige gok is)
+    # We filteren het huidige woord eruit zodat we echt alternatieven tonen
+    alternatives = [item for item in sorted_scores if item[0] != st.session_state.current_guess][:3]
+
+    if alternatives:
+        st.markdown("---")
+        st.write("👇 *Liever een ander woord? Klik om te kiezen:*")
+        alt_cols = st.columns(len(alternatives))
+        
+        for idx, (alt_word, score) in enumerate(alternatives):
+            # We maken een knop voor elk alternatief
+            if alt_cols[idx].button(f"{alt_word.upper()} ({score:.2f})"):
+                switch_word(alt_word)
+                st.rerun()
+    
+    st.markdown("---")
+
+    # 3. ACTIE KNOPPEN
+    if st.button("✅ Feedback Bevestigen", type="primary"):
         feedback_str = "".join(map(str, st.session_state.feedback_colors))
         
         if feedback_str == "2" * st.session_state.length:
@@ -200,14 +230,15 @@ elif st.session_state.step == 2:
             else:
                 # Nieuwe gok berekenen
                 with st.spinner("Beast is aan het rekenen..."):
-                    best, _ = calculate_weighted_avg_log(st.session_state.possible_words, st.session_state.possible_words)
+                    best, scores = calculate_weighted_avg_log(st.session_state.possible_words, st.session_state.possible_words)
+                    
                     st.session_state.current_guess = best
-                    # Reset kleuren voor de nieuwe ronde (eerste letter groen behouden is vaak handig, maar reset is veiliger)
+                    st.session_state.latest_scores = scores # Update de scores voor de nieuwe alternatieven
+                    
+                    # Reset kleuren
                     st.session_state.feedback_colors = [2] + [0] * (st.session_state.length - 1)
                     st.rerun()
 
-    # Reset knop voor als je vastloopt
-    st.markdown("---")
     if st.button("Spel Resetten"):
         st.session_state.step = 1
         st.rerun()
