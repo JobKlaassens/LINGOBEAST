@@ -171,32 +171,3 @@ elif st.session_state.step == 2:
     # Toon lijst met mogelijke woorden (optioneel)
     with st.expander("Zie overgebleven woorden"):
         st.write(st.session_state.possible_words)
-Stap 2: Het online zetten (Gratis)
-Om dit live te zetten zodat je vrienden het kunnen gebruiken, gebruik je Streamlit Community Cloud.
-
-Maak een GitHub account aan (als je die nog niet hebt).
-
-Maak een nieuwe Repository ("Repo") aan op GitHub.
-
-Upload de volgende bestanden naar die Repo:
-
-Het nieuwe lingoweb.py bestand (de code hierboven).
-
-Al je CSV bestanden (five_letter_logs_a.csv, etc.). Dit is cruciaal, anders werkt het niet.
-
-Een bestand genaamd requirements.txt met daarin alleen de tekst:
-
-Plaintext
-
-streamlit
-Ga naar share.streamlit.io en log in met GitHub.
-
-Klik op "New app".
-
-Selecteer je GitHub repository en het bestand lingoweb.py.
-
-Klik op Deploy.
-
-Binnen een paar minuten heb je een werkende link (bijv. lingobeast.streamlit.app) die je naar iedereen kunt sturen!
-
-Wil je dat ik je help met het maken van de requirements.txt of heb je vragen over GitHub?
