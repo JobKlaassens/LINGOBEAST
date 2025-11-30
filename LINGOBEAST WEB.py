@@ -131,7 +131,7 @@ def switch_word(new_word):
     st.session_state.feedback_colors = [2] + [0] * (st.session_state.length - 1)
 
 if st.session_state.step == 1:
-    st.write("Start een nieuw spel:")
+    st.write("Raad een nieuw woord:")
     col1, col2 = st.columns(2)
     with col1:
         length = st.radio("Aantal letters", [5, 6])
