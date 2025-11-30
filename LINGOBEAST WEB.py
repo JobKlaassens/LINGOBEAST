@@ -3,7 +3,7 @@ import csv
 import math
 from collections import Counter
 
-st.set_page_config(page_title="LingoBeast", page_icon="🦁")
+st.set_page_config(page_title="LingoBeast", page_icon="🦅")
 
 st.markdown("""
 <style>
@@ -110,7 +110,7 @@ def calculate_weighted_avg_log(remaining_solutions, guesses):
     best_guess = max(guess_weighted_logs, key=guess_weighted_logs.get)
     return best_guess, guess_weighted_logs
 
-st.title("🦁 LingoBeast")
+st.title("LINGOBEAST")
 
 if 'step' not in st.session_state:
     st.session_state.step = 1
@@ -224,7 +224,7 @@ st.markdown("---")
 st.markdown(
     """
     <div class="footer">
-        🦁 Programma gemaakt door <b>Job Klaassens</b>
+        🦅 Programma gemaakt door <b>Job Klaassens</b> 🦅
     </div>
     """,
     unsafe_allow_html=True
