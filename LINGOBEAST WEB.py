@@ -190,8 +190,9 @@ elif st.session_state.step == 2:
     # Sorteer de scores van hoog naar laag
     sorted_scores = sorted(st.session_state.latest_scores.items(), key=lambda x: x[1], reverse=True)
     
-    # Haal de top 4 (waarbij index 0 waarschijnlijk de huidige gok is)
+    # Haal de top (max 6 woorden om uit te filteren, zodat we er zeker 5 overhouden als de huidige erin zit)
     # We filteren het huidige woord eruit zodat we echt alternatieven tonen
+    # Pak de top 5 unieke alternatieven
     alternatives = [item for item in sorted_scores if item[0] != st.session_state.current_guess][:5]
 
     if alternatives:
@@ -199,8 +200,8 @@ elif st.session_state.step == 2:
         st.write("👇 *Liever een ander woord? Klik om te kiezen:*")
         alt_cols = st.columns(len(alternatives))
         
-        for idx, (alt_word) in enumerate(alternatives):
-            # We maken een knop voor elk alternatief
+        for idx, (alt_word, score) in enumerate(alternatives):
+            # We maken een knop voor elk alternatief, nu ZONDER de score
             if alt_cols[idx].button(f"{alt_word.upper()}"):
                 switch_word(alt_word)
                 st.rerun()
