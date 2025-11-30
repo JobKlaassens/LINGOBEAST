@@ -3,13 +3,10 @@ import csv
 import math
 from collections import Counter
 
-# --- CONFIGURATIE ---
 st.set_page_config(page_title="LingoBeast", page_icon="🦁")
 
-# --- CSS STYLING ---
 st.markdown("""
 <style>
-    /* Styling voor de hoofdletters (grote blokjes) */
     div.stButton > button:first-child {
         height: 3em;
         width: 100%;
@@ -18,17 +15,21 @@ st.markdown("""
         border: 2px solid #333;
     }
     
-    /* Styling voor de alternatieve knoppen (kleiner en subtieler) */
     div[data-testid="stHorizontalBlock"] button {
         height: auto;
         font-size: 16px !important;
         font-weight: normal;
         border: 1px solid #ccc;
     }
+    
+    .footer {
+        text-align: center;
+        color: #888;
+        font-size: 14px;
+        margin-top: 50px;
+    }
 </style>
 """, unsafe_allow_html=True)
-
-# --- FUNCTIES (LOGICA) ---
 
 def load_precomputed_logs(first_letter, word_length):
     if word_length == 5:
@@ -55,13 +56,11 @@ def filter_words(possible_words, guess, feedback):
         guess_list = list(guess)
         matches = [0] * len(guess)
 
-        # Stap 1: Groen (2)
         for i in range(len(guess)):
             if guess_list[i] == solution_list[i]:
                 matches[i] = 2
                 solution_list[i] = None 
 
-        # Stap 2: Geel (1)
         for i in range(len(guess)):
             if matches[i] == 0 and guess_list[i] in solution_list:
                 matches[i] = 1
@@ -74,7 +73,6 @@ def filter_words(possible_words, guess, feedback):
 def calculate_weighted_avg_log(remaining_solutions, guesses):
     guess_analysis = {guess: Counter() for guess in guesses}
     
-    # Optimalisatie: bij veel woorden, rekenen we met een subset voor snelheid
     if len(remaining_solutions) > 500:
          guesses_to_check = guesses[:500]
     else:
@@ -112,11 +110,8 @@ def calculate_weighted_avg_log(remaining_solutions, guesses):
     best_guess = max(guess_weighted_logs, key=guess_weighted_logs.get)
     return best_guess, guess_weighted_logs
 
-# --- DE WEBSITE INTERFACE ---
-
 st.title("🦁 LingoBeast")
 
-# Initialiseer Sessie Status
 if 'step' not in st.session_state:
     st.session_state.step = 1
 if 'possible_words' not in st.session_state:
@@ -128,17 +123,13 @@ if 'feedback_colors' not in st.session_state:
 if 'latest_scores' not in st.session_state:
     st.session_state.latest_scores = {}
 
-# Helper functie om kleuren te cyclen
 def cycle_color(index):
     st.session_state.feedback_colors[index] = (st.session_state.feedback_colors[index] + 1) % 3
 
-# Helper functie om te wisselen naar een alternatief woord
 def switch_word(new_word):
     st.session_state.current_guess = new_word
-    # Reset kleuren (eerste letter groen, rest grijs)
     st.session_state.feedback_colors = [2] + [0] * (st.session_state.length - 1)
 
-# --- STAP 1: SETUP ---
 if st.session_state.step == 1:
     st.write("Start een nieuw spel:")
     col1, col2 = st.columns(2)
@@ -155,7 +146,7 @@ if st.session_state.step == 1:
             logs = load_precomputed_logs(first_letter, length)
             if logs:
                 st.session_state.possible_words = list(logs.keys())
-                st.session_state.latest_scores = logs # Opslaan voor alternatieven
+                st.session_state.latest_scores = logs
                 st.session_state.current_guess = max(logs, key=logs.get)
                 st.session_state.feedback_colors = [2] + [0] * (length - 1)
                 st.session_state.step = 2
@@ -163,18 +154,15 @@ if st.session_state.step == 1:
         else:
             st.warning("Vul een geldige letter in.")
 
-# --- STAP 2: SPELEN ---
 elif st.session_state.step == 2:
     st.write(f"**{len(st.session_state.possible_words)}** woorden over.")
     
-    # 1. DE HOOFD BLOKJES
     st.markdown("### Huidige gok:")
     cols = st.columns(st.session_state.length)
     current_word = st.session_state.current_guess.upper()
     
     for i, col in enumerate(cols):
         status = st.session_state.feedback_colors[i]
-        # Veiligheid: zorg dat we niet crashen als woordlengte niet klopt
         letter = current_word[i] if i < len(current_word) else "?"
         
         if status == 2:
@@ -186,13 +174,7 @@ elif st.session_state.step == 2:
             
         col.button(display_text, key=f"btn_{i}", on_click=cycle_color, args=(i,))
 
-    # 2. DE ALTERNATIEVEN
-    # Sorteer de scores van hoog naar laag
     sorted_scores = sorted(st.session_state.latest_scores.items(), key=lambda x: x[1], reverse=True)
-    
-    # Haal de top (max 6 woorden om uit te filteren, zodat we er zeker 5 overhouden als de huidige erin zit)
-    # We filteren het huidige woord eruit zodat we echt alternatieven tonen
-    # Pak de top 5 unieke alternatieven
     alternatives = [item for item in sorted_scores if item[0] != st.session_state.current_guess][:5]
 
     if alternatives:
@@ -201,14 +183,12 @@ elif st.session_state.step == 2:
         alt_cols = st.columns(len(alternatives))
         
         for idx, (alt_word, score) in enumerate(alternatives):
-            # We maken een knop voor elk alternatief, nu ZONDER de score
             if alt_cols[idx].button(f"{alt_word.upper()}"):
                 switch_word(alt_word)
                 st.rerun()
     
     st.markdown("---")
 
-    # 3. ACTIE KNOPPEN
     if st.button("✅ Feedback Bevestigen", type="primary"):
         feedback_str = "".join(map(str, st.session_state.feedback_colors))
         
@@ -219,7 +199,6 @@ elif st.session_state.step == 2:
                 st.session_state.step = 1
                 st.rerun()
         else:
-            # Filteren
             st.session_state.possible_words = filter_words(
                 st.session_state.possible_words, 
                 st.session_state.current_guess, 
@@ -229,17 +208,24 @@ elif st.session_state.step == 2:
             if not st.session_state.possible_words:
                 st.error("Geen woorden meer mogelijk! Heb je de feedback goed ingevuld?")
             else:
-                # Nieuwe gok berekenen
                 with st.spinner("Beast is aan het rekenen..."):
                     best, scores = calculate_weighted_avg_log(st.session_state.possible_words, st.session_state.possible_words)
                     
                     st.session_state.current_guess = best
-                    st.session_state.latest_scores = scores # Update de scores voor de nieuwe alternatieven
-                    
-                    # Reset kleuren
+                    st.session_state.latest_scores = scores
                     st.session_state.feedback_colors = [2] + [0] * (st.session_state.length - 1)
                     st.rerun()
 
     if st.button("Spel Resetten"):
         st.session_state.step = 1
         st.rerun()
+
+st.markdown("---")
+st.markdown(
+    """
+    <div class="footer">
+        🦁 Programma gemaakt door <b>Job Klaassens</b>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
