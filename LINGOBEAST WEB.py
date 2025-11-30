@@ -4,7 +4,6 @@ import math
 from collections import Counter
 import os
 
-
 # --- JOUW ORIGINELE LOGICA FUNCTIES ---
 
 def load_precomputed_logs(first_letter, word_length):
@@ -13,19 +12,18 @@ def load_precomputed_logs(first_letter, word_length):
         log_file = f"five_letter_logs_{first_letter}.csv"
     else:
         log_file = f"six_letter_logs_{first_letter}.csv"
-
+    
     word_logs = {}
     try:
         with open(log_file, "r", encoding='utf-8') as csvfile:
             reader = csv.reader(csvfile)
-            next(reader)
+            next(reader) 
             for row in reader:
                 word_logs[row[0]] = float(row[1])
     except FileNotFoundError:
         st.error(f"Kan bestand {log_file} niet vinden. Zorg dat deze geüpload is.")
         return {}
     return word_logs
-
 
 def filter_words(possible_words, guess, feedback):
     filtered_words = []
@@ -38,30 +36,29 @@ def filter_words(possible_words, guess, feedback):
         for i in range(len(guess)):
             if guess_list[i] == solution_list[i]:
                 matches[i] = 2
-                solution_list[i] = None
+                solution_list[i] = None 
 
-                # Stap 2: Geel (1)
+        # Stap 2: Geel (1)
         for i in range(len(guess)):
             if matches[i] == 0 and guess_list[i] in solution_list:
                 matches[i] = 1
-                solution_list[solution_list.index(guess_list[i])] = None
+                solution_list[solution_list.index(guess_list[i])] = None 
 
         if "".join(map(str, matches)) == feedback:
             filtered_words.append(word)
     return filtered_words
 
-
 def calculate_weighted_avg_log(remaining_solutions, guesses):
-    # Dit kan traag zijn in de browser als de lijst lang is,
+    # Dit kan traag zijn in de browser als de lijst lang is, 
     # dus we tonen een laadbalkje of beperken het.
     guess_analysis = {guess: Counter() for guess in guesses}
-
+    
     for solution in remaining_solutions:
         for guess in guesses:
             solution_list = list(solution)
             guess_list = list(guess)
             feedback = ["0"] * len(guess)
-
+            
             for i in range(len(guess)):
                 if guess_list[i] == solution_list[i]:
                     feedback[i] = "2"
@@ -84,10 +81,9 @@ def calculate_weighted_avg_log(remaining_solutions, guesses):
 
     if not guess_weighted_logs:
         return None, {}
-
+        
     best_guess = max(guess_weighted_logs, key=guess_weighted_logs.get)
     return best_guess, guess_weighted_logs
-
 
 # --- DE WEBSITE INTERFACE ---
 
@@ -114,7 +110,7 @@ if st.session_state.step == 1:
         if first_letter and len(first_letter) == 1:
             st.session_state.length = length
             st.session_state.first_letter = first_letter
-
+            
             # Laad woorden
             logs = load_precomputed_logs(first_letter, length)
             if logs:
@@ -122,21 +118,21 @@ if st.session_state.step == 1:
                 # Beste eerste gok bepalen
                 st.session_state.current_guess = max(logs, key=logs.get)
                 st.session_state.step = 2
-                st.rerun()  # Herlaad de pagina
+                st.rerun() # Herlaad de pagina
         else:
             st.warning("Vul een geldige eerste letter in.")
 
 # Stap 2: Het spel
 elif st.session_state.step == 2:
     st.info(f"Woordlengte: {st.session_state.length} | Eerste letter: {st.session_state.first_letter.upper()}")
-
+    
     st.markdown(f"### 💡 Advies: Gok **{st.session_state.current_guess.upper()}**")
-
+    
     st.write("Vul de feedback in die je van Lingo krijgt:")
     st.caption("0 = Grijs (fout), 1 = Geel (andere plek), 2 = Groen (goed)")
-
+    
     feedback = st.text_input("Feedback code (bijv. 21020)", max_chars=st.session_state.length)
-
+    
     if st.button("Verwerk Feedback"):
         if len(feedback) == st.session_state.length and feedback.isdigit():
             if feedback == "2" * st.session_state.length:
@@ -149,14 +145,14 @@ elif st.session_state.step == 2:
                 # Filter woorden
                 old_count = len(st.session_state.possible_words)
                 st.session_state.possible_words = filter_words(
-                    st.session_state.possible_words,
-                    st.session_state.current_guess,
+                    st.session_state.possible_words, 
+                    st.session_state.current_guess, 
                     feedback
                 )
                 new_count = len(st.session_state.possible_words)
-
+                
                 st.write(f"Mogelijkheden gingen van {old_count} naar {new_count}.")
-
+                
                 if new_count == 0:
                     st.error("Geen woorden meer over! Check je feedback input.")
                 elif new_count == 1:
@@ -165,7 +161,7 @@ elif st.session_state.step == 2:
                     # Bereken nieuwe beste gok
                     with st.spinner('Beast is aan het rekenen...'):
                         # Optimalisatie: als er nog heel veel woorden zijn, reken dan niet alles door om tijd te besparen
-                        subset = st.session_state.possible_words[:500]
+                        subset = st.session_state.possible_words[:500] 
                         best, _ = calculate_weighted_avg_log(st.session_state.possible_words, subset)
                         st.session_state.current_guess = best
                         st.rerun()
@@ -175,3 +171,32 @@ elif st.session_state.step == 2:
     # Toon lijst met mogelijke woorden (optioneel)
     with st.expander("Zie overgebleven woorden"):
         st.write(st.session_state.possible_words)
+Stap 2: Het online zetten (Gratis)
+Om dit live te zetten zodat je vrienden het kunnen gebruiken, gebruik je Streamlit Community Cloud.
+
+Maak een GitHub account aan (als je die nog niet hebt).
+
+Maak een nieuwe Repository ("Repo") aan op GitHub.
+
+Upload de volgende bestanden naar die Repo:
+
+Het nieuwe lingoweb.py bestand (de code hierboven).
+
+Al je CSV bestanden (five_letter_logs_a.csv, etc.). Dit is cruciaal, anders werkt het niet.
+
+Een bestand genaamd requirements.txt met daarin alleen de tekst:
+
+Plaintext
+
+streamlit
+Ga naar share.streamlit.io en log in met GitHub.
+
+Klik op "New app".
+
+Selecteer je GitHub repository en het bestand lingoweb.py.
+
+Klik op Deploy.
+
+Binnen een paar minuten heb je een werkende link (bijv. lingobeast.streamlit.app) die je naar iedereen kunt sturen!
+
+Wil je dat ik je help met het maken van de requirements.txt of heb je vragen over GitHub?
